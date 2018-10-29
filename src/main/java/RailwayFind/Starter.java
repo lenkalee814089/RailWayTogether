@@ -71,7 +71,7 @@ public  class Starter {
             return record;
 
             //根据不同的证件号划分ｒｅｃｏｒｄ
-        }).mapToPair(record -> new Tuple2<String, Record>(record.getCC(), record))
+        }).mapToPair(record -> new Tuple2<>(record.getCC(), record))
 
                 //让同车次的记录都到同一个区
                 .partitionBy(new HashPartitioner(rdd.getNumPartitions()))
@@ -79,7 +79,7 @@ public  class Starter {
                 //同个分区的record 进行分析处运算
                 .mapPartitions(it -> {
                     Map<String, List<Record>> map = new HashMap<>();
-                    List<Record> recordLinkedList = null;
+                    List<Record> recordLinkedList ;
                     Iterator iterator = null;
 
                     while (it.hasNext()) {
@@ -89,7 +89,7 @@ public  class Starter {
                         map.put(record.getCC(), recordLinkedList);
                     }
 
-                    List<Record> recordsOfHotel = null;
+                    List<Record> recordsOfHotel ;
 
                     List<Map<String,int[]>> resultOfPartion = new LinkedList<>();
 
@@ -97,8 +97,6 @@ public  class Starter {
                     for (Map.Entry<String, List<Record>> listEntry : map.entrySet()) {
 
                         recordsOfHotel = listEntry.getValue();
-
-
 
                         resultOfPartion.add(FindUtils.getResultMap(recordsOfHotel));
 
@@ -137,7 +135,6 @@ public  class Starter {
 
         }
 
-        BufferedWriter out1 = FileReadWriteUtil.getWriter(similarResultPath);
         LinkedList<String> resultList1 = new LinkedList<>();
         LinkedList<String> resultList2 = new LinkedList<>();
 
@@ -149,8 +146,6 @@ public  class Starter {
                 resultList2.add(x.getKey() +"邻座次数："+x.getValue());
             }
         });
-
-
 
 
         //结果排序
@@ -202,18 +197,18 @@ public  class Starter {
         //列簇
         String columFamily ="f";
 
-        String HbaseZkQuorum = "127.0.0.1";
+        String hbaseZkQuorum = "127.0.0.1";
 
-        String HbaseZkClientPort = "2181";
+        String hbaseZkClientPort = "2181";
 
         //输出结果的路径
-        String sleepResultPath = "/home/lee/app/idea-IU-182.4892.20/workSop/FindTogether/src/main/Text/同宿结果";
-        String similarResultPath ="/home/lee/app/idea-IU-182.4892.20/workSop/FindTogether/src/main/Text/同行结果";
+        String sleepResultPath = "/home/lee/app/idea-IU-182.4892.20/workSop/FindTogether/src/main/Text/同行结果";
+        String similarResultPath ="/home/lee/app/idea-IU-182.4892.20/workSop/FindTogether/src/main/Text/邻座结果";
 
         Starter starter = new Starter();
 
-        Tuple2<JavaRDD<String>, JavaRDD<String>> rddTuple2 = starter.start(tableName, columFamily, sparkConf, HbaseZkQuorum,
-                HbaseZkClientPort, sleepResultPath, similarResultPath);
+        Tuple2<JavaRDD<String>, JavaRDD<String>> rddTuple2 = starter.start(tableName, columFamily, sparkConf, hbaseZkQuorum,
+                hbaseZkClientPort, sleepResultPath, similarResultPath);
 
         jsc.stop();
         admin.close();

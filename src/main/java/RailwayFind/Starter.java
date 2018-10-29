@@ -22,35 +22,56 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.util.*;
 
+import static RailwayFind.HbaseHandle.Processer.write2File;
+
 public  class Starter {
 
     private static final Logger LOGGER = Logger.getLogger(Starter.class);
-    private static JavaSparkContext jsc;
-    private static   Configuration hConf;
-    private static HBaseAdmin admin;
-    private static SparkConf sparkConf;
+    private JavaSparkContext jsc;
+    private Configuration hConf;
+    private HBaseAdmin admin;
+    private SparkConf sparkConf;
 
-    public void init (SparkConf sparkConf,String hbaseZkQuorum,String hbaseZkClientPort,String tablename) throws IOException {
+    public Starter (SparkConf sparkConf1,String hbaseZkQuorum,String hbaseZkClientPort,String tablename) throws IOException {
 
-        sparkConf=sparkConf;
+        this.sparkConf=sparkConf1;
 
-        jsc = new JavaSparkContext(sparkConf);
+        this.jsc = new JavaSparkContext(sparkConf);
 
-        hConf = HBaseConfiguration.create();
-
-        admin = new HBaseAdmin(hConf);
+        this.hConf = HBaseConfiguration.create();
 
         //设置zooKeeper集群地址
-        hConf.set("hbase.zookeeper.quorum",hbaseZkQuorum);
+        this.hConf.set("hbase.zookeeper.quorum",hbaseZkQuorum);
 
         //设置zookeeper连接端口，默认2181
-        hConf.set("hbase.zookeeper.property.clientPort", hbaseZkClientPort);
+        this.hConf.set("hbase.zookeeper.property.clientPort", hbaseZkClientPort);
 
-        hConf.set(TableInputFormat.INPUT_TABLE, tablename);
+        this.hConf.set(TableInputFormat.INPUT_TABLE, tablename);
+
+        this.admin = new HBaseAdmin(hConf);
+
     }
 
-    public Tuple2<JavaRDD<String>, JavaRDD<String>> process(JavaPairRDD<ImmutableBytesWritable, Result> rdd, String columFamily, String similarResultPath,
-                                                            String sleepResultPath, int parallelism) throws IOException {
+    public Tuple2<JavaRDD<String>, JavaRDD<String>> start(String tablename,String columFamily,SparkConf sparkConf,String hbaseZkQuorum,String hbaseZkClientPort,
+                                                          String sleepResultPath,String similarResultPath) throws IOException {
+
+        if (!admin.isTableAvailable(tablename)) {
+            LOGGER.error(tablename+"表不存在!");
+            return null;
+        }
+
+        //读取数据并转化成rdd
+        JavaPairRDD<ImmutableBytesWritable, Result> hBaseRDD
+                = jsc.newAPIHadoopRDD(hConf, TableInputFormat.class, ImmutableBytesWritable.class, Result.class);
+
+        Tuple2<JavaRDD<String>, JavaRDD<String>> rddTuple2 = process(hBaseRDD, columFamily, similarResultPath, sleepResultPath, 3);
+
+        return rddTuple2;
+
+    }
+
+    public Tuple2<JavaRDD<String>, JavaRDD<String>> process(JavaPairRDD<ImmutableBytesWritable, Result> rdd, String columFamily, String togetherResultPath,
+                                                            String seatCLoseResultPath, int parallelism) throws IOException {
         JavaRDD<Map<String,int[]>> JavaRDD
                 = rdd.map(tuple -> {
             Result result = tuple._2;
@@ -67,6 +88,7 @@ public  class Starter {
                     Bytes.toString(result.getValue(columFamily.getBytes(), "ZWH".getBytes())),
                     Bytes.toString(result.getValue(columFamily.getBytes(), "FCSJ".getBytes()))
             );
+            System.out.println(record.toString());
 
             return record;
 
@@ -74,31 +96,31 @@ public  class Starter {
         }).mapToPair(record -> new Tuple2<>(record.getCC(), record))
 
                 //让同车次的记录都到同一个区
-                .partitionBy(new HashPartitioner(rdd.getNumPartitions()))
+                .partitionBy(new HashPartitioner(parallelism))
 
                 //同个分区的record 进行分析处运算
                 .mapPartitions(it -> {
                     Map<String, List<Record>> map = new HashMap<>();
-                    List<Record> recordLinkedList ;
+                    List<Record> recordList ;
                     Iterator iterator = null;
 
                     while (it.hasNext()) {
                         Record record = it.next()._2;
-                        recordLinkedList = map.getOrDefault(record.getCC(), new LinkedList<Record>());
-                        recordLinkedList.add(record);
-                        map.put(record.getCC(), recordLinkedList);
+                        recordList = map.getOrDefault(record.getCC(), new LinkedList<Record>());
+                        recordList.add(record);
+                        map.put(record.getCC(), recordList);
                     }
 
-                    List<Record> recordsOfHotel ;
+                    List<Record> recordsOfCC ;
 
                     List<Map<String,int[]>> resultOfPartion = new LinkedList<>();
 
                     //遍历map的每个list，放入处理函数
                     for (Map.Entry<String, List<Record>> listEntry : map.entrySet()) {
 
-                        recordsOfHotel = listEntry.getValue();
+                        recordsOfCC = listEntry.getValue();
 
-                        resultOfPartion.add(FindUtils.getResultMap(recordsOfHotel));
+                        resultOfPartion.add(FindUtils.getResultMap(recordsOfCC));
 
                     }
 
@@ -131,6 +153,7 @@ public  class Starter {
                 sumArr[1]+=countArr[1];
 
                 resultMap.put(key, sumArr);
+
             }
 
         }
@@ -139,11 +162,13 @@ public  class Starter {
         LinkedList<String> resultList2 = new LinkedList<>();
 
         resultMap.entrySet().forEach(x -> {
-            if(x.getValue()[0]>=4){
-                resultList1.add(x.getKey() +"的同行次数："+x.getValue());
+            if(x.getValue()[0]>=2){
+                resultList1.add(x.getKey() +"的同行次数："+x.getValue()[0]);
+                System.out.println(x.getKey() +"的同行次数："+x.getValue()[0]);
             }
             if(x.getValue()[1]>=2){
-                resultList2.add(x.getKey() +"邻座次数："+x.getValue());
+                resultList2.add(x.getKey() +"邻座次数："+x.getValue()[1]);
+                System.out.println(x.getKey() +"邻座次数："+x.getValue()[1]);
             }
         });
 
@@ -156,34 +181,18 @@ public  class Starter {
 
         JavaRDD<String> closeSeatRDD = jsc.parallelize(resultList2, parallelism);
 
+        //写到文件
+        write2File(resultList1, togetherResultPath);
+        write2File(resultList2, seatCLoseResultPath);
+
         return new Tuple2<>(togetherRDD,closeSeatRDD) ;
 
-        //写到文件
-//        write2File(resultList1, similarResultPath);
-//        write2File(resultList2, sleepResultPath);
+
+
     }
 
 
-    public Tuple2<JavaRDD<String>, JavaRDD<String>> start(String tablename,String columFamily,SparkConf sparkConf,String hbaseZkQuorum,String hbaseZkClientPort,
-                                                          String sleepResultPath,String similarResultPath) throws IOException {
-        //初始化
-        init(sparkConf,hbaseZkQuorum,hbaseZkClientPort,tablename);
 
-
-        if (!admin.isTableAvailable(tablename)) {
-            LOGGER.error(tablename+"表不存在!");
-            return null;
-        }
-
-        //读取数据并转化成rdd
-        JavaPairRDD<ImmutableBytesWritable, Result> hBaseRDD
-                = jsc.newAPIHadoopRDD(hConf, TableInputFormat.class, ImmutableBytesWritable.class, Result.class);
-
-        Tuple2<JavaRDD<String>, JavaRDD<String>> rddTuple2 = process(hBaseRDD, columFamily, similarResultPath, sleepResultPath, 3);
-
-        return rddTuple2;
-
-    }
 
     public static void main(String[] args) throws IOException {
 
@@ -192,7 +201,7 @@ public  class Starter {
         sparkConf.setAppName("HBaseTest").setMaster("local[3]");
 
         //注意,table中数据字段需要至少包含zjhm,lgbm,rzsj,tfsj四个字段,rowkey为处理证件号码+旅馆编码+入住时间
-        String tableName="a";
+        String tableName="b";
 
         //列簇
         String columFamily ="f";
@@ -202,16 +211,16 @@ public  class Starter {
         String hbaseZkClientPort = "2181";
 
         //输出结果的路径
-        String sleepResultPath = "/home/lee/app/idea-IU-182.4892.20/workSop/FindTogether/src/main/Text/同行结果";
-        String similarResultPath ="/home/lee/app/idea-IU-182.4892.20/workSop/FindTogether/src/main/Text/邻座结果";
+        String togetherResultPath = "/home/lee/app/idea-IU-182.4892.20/workSop/RailwayFind/textFIle/铁路同行结果";
+        String seatCLoseResultPath ="/home/lee/app/idea-IU-182.4892.20/workSop/RailwayFind/textFIle/铁路邻座位结果";
 
-        Starter starter = new Starter();
+        Starter starter = new Starter(sparkConf,hbaseZkQuorum,hbaseZkClientPort,tableName);
 
         Tuple2<JavaRDD<String>, JavaRDD<String>> rddTuple2 = starter.start(tableName, columFamily, sparkConf, hbaseZkQuorum,
-                hbaseZkClientPort, sleepResultPath, similarResultPath);
+                hbaseZkClientPort, togetherResultPath, seatCLoseResultPath);
 
-        jsc.stop();
-        admin.close();
+        starter.jsc.stop();
+        starter.admin.close();
 
     }
 

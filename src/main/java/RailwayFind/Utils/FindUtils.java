@@ -1,7 +1,6 @@
 package RailwayFind.Utils;
 
 
-import RailwayFind.Model.Person;
 import RailwayFind.Model.Record;
 import org.apache.log4j.Logger;
 import scala.Tuple2;
@@ -84,13 +83,17 @@ public class FindUtils {
 
                     //相似判断：如果某两条记录判定同行
                     if (isSameRailway(recordA, recordB)){
+                        System.out.println("判定tongxing");
                         key = StringUtil.combine2GMSFZ(recordA.getGMSFHM()  ,recordB.getGMSFHM() );
                         //获得同行数和邻座数
                         arr = map.getOrDefault(key, new int[]{0, 0});
                         arr[0]++;
                         if (isCloseSeat(recordA, recordB)){
+                            System.out.println("判定邻座");
                             arr[1]++;
                         }
+
+                        map.put(key, arr);
 
 
                     }

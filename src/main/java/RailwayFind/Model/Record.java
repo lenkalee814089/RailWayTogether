@@ -10,6 +10,21 @@ public class Record implements Serializable {
     private String GMSFHM;
     private String rowKey;
     private String SFD;
+
+    @Override
+    public String toString() {
+        return "Record{" +
+                "GMSFHM='" + GMSFHM + '\'' +
+                ", rowKey='" + rowKey + '\'' +
+                ", SFD='" + SFD + '\'' +
+                ", MDD='" + MDD + '\'' +
+                ", CC='" + CC + '\'' +
+                ", CXH='" + CXH + '\'' +
+                ", ZWH='" + ZWH + '\'' +
+                ", FCSJ='" + FCSJ + '\'' +
+                '}';
+    }
+
     private String MDD;
     private String CC;
     private String CXH;
@@ -28,7 +43,7 @@ public class Record implements Serializable {
         this.FCSJ = FCSJ;
     }
 
-    public Record(String GMSFHM, String rowKey, String SFD, String MDD, String CC, String CXH, String ZWH, String FCSJ) {
+    public Record( String rowKey,String GMSFHM, String SFD, String MDD, String CC, String CXH, String ZWH, String FCSJ) {
         this.GMSFHM = GMSFHM;
         this.rowKey = rowKey;
         this.SFD = SFD;

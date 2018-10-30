@@ -92,20 +92,12 @@ public class FindUtils {
                             System.out.println("判定邻座");
                             arr[1]++;
                         }
-
                         map.put(key, arr);
-
-
                     }
-
-
                 }
-
             }
         }
-
         return map;
-
     }
 
     public static Comparator<String> getComparetor(){
@@ -114,7 +106,7 @@ public class FindUtils {
             public int compare(String o1, String o2) {
                 String[] s1 = o1.split(":");
                 String[] s2 = o2.split(":");
-                return Integer.parseInt(s1[0]) == Integer.parseInt(s2[0]) ? 0 : Integer.parseInt(s1[0]) > Integer.parseInt(s2[0]) ? 1 : -1;
+                return Integer.compare(Integer.parseInt(s1[0]), Integer.parseInt(s2[0]));
             }
         };
         return comparator;

@@ -18,11 +18,9 @@ import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import scala.Tuple2;
 
-import java.io.BufferedWriter;
 import java.io.IOException;
 import java.util.*;
 
-import static RailwayFind.HbaseHandle.Processer.write2File;
 
 public  class Starter {
 
@@ -52,8 +50,8 @@ public  class Starter {
 
     }
 
-    public Tuple2<JavaRDD<String>, JavaRDD<String>> start(String tablename,String columFamily,SparkConf sparkConf,String hbaseZkQuorum,String hbaseZkClientPort,
-                                                          String sleepResultPath,String similarResultPath) throws IOException {
+    public JavaRDD<String[]> start(String tablename, String columFamily, SparkConf sparkConf, String hbaseZkQuorum, String hbaseZkClientPort,
+                                   String sleepResultPath, String similarResultPath) throws IOException {
 
         if (!admin.isTableAvailable(tablename)) {
             LOGGER.error(tablename+"表不存在!");
@@ -64,14 +62,14 @@ public  class Starter {
         JavaPairRDD<ImmutableBytesWritable, Result> hBaseRDD
                 = jsc.newAPIHadoopRDD(hConf, TableInputFormat.class, ImmutableBytesWritable.class, Result.class);
 
-        Tuple2<JavaRDD<String>, JavaRDD<String>> rddTuple2 = process(hBaseRDD, columFamily, similarResultPath, sleepResultPath, 3);
+        JavaRDD<String[]> resultRdd = process(hBaseRDD, columFamily, similarResultPath, sleepResultPath, 3);
 
-        return rddTuple2;
+        return resultRdd;
 
     }
 
-    public Tuple2<JavaRDD<String>, JavaRDD<String>> process(JavaPairRDD<ImmutableBytesWritable, Result> rdd, String columFamily, String togetherResultPath,
-                                                            String seatCLoseResultPath, int parallelism) throws IOException {
+    public JavaRDD<String[]> process(JavaPairRDD<ImmutableBytesWritable, Result> rdd, String columFamily, String togetherResultPath,
+                                     String seatCLoseResultPath, int parallelism) throws IOException {
         JavaRDD<Map<String,int[]>> JavaRDD
                 = rdd.map(tuple -> {
             Result result = tuple._2;
@@ -123,18 +121,14 @@ public  class Starter {
                         resultOfPartion.add(FindUtils.getResultMap(recordsOfCC));
 
                     }
-
                     return resultOfPartion.iterator();
-
                 });
 
         //把每个partition的计算结果汇总
         List<Map<String, int[]>> collect = JavaRDD.collect();
 
-
-
         //汇总同行次数和邻座次数
-        HashMap<String, int[]> resultMap = new HashMap<>();
+        HashMap<String, int[]> sumMap = new HashMap<>();
         for (Map<String, int[]> map : collect) {
 
             String key;
@@ -147,48 +141,47 @@ public  class Starter {
 
                 countArr =KV.getValue();
 
-                sumArr = resultMap.getOrDefault(key,new int[]{0,0});
+                sumArr = sumMap.getOrDefault(key,new int[]{0,0});
 
                 sumArr[0]+=countArr[0];
                 sumArr[1]+=countArr[1];
 
-                resultMap.put(key, sumArr);
+                sumMap.put(key, sumArr);
 
             }
-
         }
 
-        LinkedList<String> resultList1 = new LinkedList<>();
-        LinkedList<String> resultList2 = new LinkedList<>();
+        //结果放入两个list为后续写文件
+        LinkedList<String> outPutList1 = new LinkedList<>();
+        LinkedList<String> outPutList2 = new LinkedList<>();
 
-        resultMap.entrySet().forEach(x -> {
+        sumMap.entrySet().forEach(x -> {
             if(x.getValue()[0]>=2){
-                resultList1.add(x.getKey() +"的同行次数："+x.getValue()[0]);
+                outPutList1.add(x.getKey() +"的同行次数："+x.getValue()[0]);
                 System.out.println(x.getKey() +"的同行次数："+x.getValue()[0]);
             }
             if(x.getValue()[1]>=2){
-                resultList2.add(x.getKey() +"邻座次数："+x.getValue()[1]);
+                outPutList2.add(x.getKey() +"邻座次数："+x.getValue()[1]);
                 System.out.println(x.getKey() +"邻座次数："+x.getValue()[1]);
             }
         });
 
 
         //结果排序
-        Collections.sort(resultList1,FindUtils.getComparetor());
-        Collections.sort(resultList2, FindUtils.getComparetor());
+        Collections.sort(outPutList1,FindUtils.getComparetor());
+        Collections.sort(outPutList2, FindUtils.getComparetor());
+        //写文件
+        FileReadWriteUtil.write2File(outPutList1, togetherResultPath);
+        FileReadWriteUtil.write2File(outPutList2, seatCLoseResultPath);
 
-        JavaRDD<String> togetherRDD = jsc.parallelize(resultList1, parallelism);
+        //结果转化为rdd
+        LinkedList<String[]> resultList = new LinkedList<>();
+        sumMap.entrySet().forEach(x -> {
+            resultList.add(new String[]{x.getKey(),x.getValue()[0]+"",x.getValue()[1]+""});
+        });
+        JavaRDD<String[]> resultRDD = jsc.parallelize(resultList, parallelism);
 
-        JavaRDD<String> closeSeatRDD = jsc.parallelize(resultList2, parallelism);
-
-        //写到文件
-        write2File(resultList1, togetherResultPath);
-        write2File(resultList2, seatCLoseResultPath);
-
-        return new Tuple2<>(togetherRDD,closeSeatRDD) ;
-
-
-
+        return resultRDD ;
     }
 
 
@@ -216,7 +209,7 @@ public  class Starter {
 
         Starter starter = new Starter(sparkConf,hbaseZkQuorum,hbaseZkClientPort,tableName);
 
-        Tuple2<JavaRDD<String>, JavaRDD<String>> rddTuple2 = starter.start(tableName, columFamily, sparkConf, hbaseZkQuorum,
+        JavaRDD<String[]> resultRdd = starter.start(tableName, columFamily, sparkConf, hbaseZkQuorum,
                 hbaseZkClientPort, togetherResultPath, seatCLoseResultPath);
 
         starter.jsc.stop();

@@ -1,4 +1,4 @@
-package RailwayFind.HbaseHandle;
+package RailwayFind.DataMake;
 
 import RailwayFind.DataMake.DataProduce;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -14,13 +14,12 @@ import scala.Tuple2;
 import java.io.IOException;
 import java.util.LinkedList;
 
-public class handle {
+public class PutsData {
     /**
      * 向ｈｂａｓｅ插入数据
      * @throws IOException
      */
     public static void putsData() throws IOException {
-
 
         SparkContext sc = new SparkContext(new SparkConf().setMaster("local[1]").setAppName("hbase"));
         JobConf jobConf =null;
@@ -29,7 +28,6 @@ public class handle {
         // jobConf.set("zookeeper.znode.parent", "/hbase");
         jobConf.setOutputFormat(TableOutputFormat.class);
         HTable table = new HTable(jobConf, "b");
-
 
         LinkedList<Put> puts = new LinkedList<>();
         DataProduce dataProducer = new DataProduce();
@@ -64,7 +62,5 @@ public class handle {
 
     public static void main(String[] args) throws IOException {
         putsData();
-
-        
     }
 }

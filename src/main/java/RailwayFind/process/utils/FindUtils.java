@@ -1,9 +1,8 @@
-package RailwayFind.Utils;
+package RailwayFind.process.utils;
 
 
-import RailwayFind.Model.Record;
+import RailwayFind.process.model.Record;
 import org.apache.log4j.Logger;
-import scala.Tuple2;
 
 import java.util.*;
 

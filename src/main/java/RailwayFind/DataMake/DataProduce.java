@@ -1,11 +1,10 @@
 package RailwayFind.DataMake;
 
-import RailwayFind.Utils.DateUtils;
-import RailwayFind.Utils.StringUtil;
+import RailwayFind.process.utils.DateUtils;
+import RailwayFind.process.utils.StringUtil;
 import scala.Tuple2;
 
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 

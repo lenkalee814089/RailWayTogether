@@ -12,6 +12,7 @@ import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.api.java.function.ForeachFunction;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
@@ -91,7 +92,7 @@ public  class Starter {
 
 
     //---------insight组件-------------------------------------------------------------------------------------------------------------------------------------
-        Dataset<Row> resultDf = Processer.process(hbaseDf, sparkSession, columFamily,  3);
+        Dataset<Row> resultDf = Processer.process(hbaseDf, sparkSession, 4,  1);
     //----------------------------------------------------------------------------------------------------------------------------------------------
 
         return resultDf;
@@ -106,7 +107,7 @@ public  class Starter {
 
         sparkConf.setAppName("HBaseTest").setMaster("local[3]");
 
-        //注意,table中数据字段需要至少包含GMSFHM,SFD,MDD,CC,CXH,ZWH,FCSJ 7个字段,rowkey为处理证件号码+旅馆编码+入住时间
+        //注意,table中数据字段需要至少包含GMSFHM,SFD,MDD,CC,CXH,ZWH,FCSJ 7个字段
         String tableName="b";
 
         String columFamily ="f";
@@ -115,7 +116,9 @@ public  class Starter {
 
         String hbaseZkClientPort = "2181";
 
-        Starter.start(tableName, columFamily, sparkConf, hbaseZkQuorum,hbaseZkClientPort);
+        Dataset<Row> dataset = Starter.start(tableName, columFamily, sparkConf, hbaseZkQuorum, hbaseZkClientPort);
+
+        dataset.foreach((ForeachFunction<Row>) row -> System.out.println(row.toString()));
 
         Starter.jsc.stop();
         Starter.admin.close();

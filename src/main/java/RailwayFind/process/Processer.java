@@ -99,27 +99,27 @@ public class Processer {
         }
 
         //结果放入两个list为后续写文件
-        LinkedList<String> outPutList1 = new LinkedList<>();
-        LinkedList<String> outPutList2 = new LinkedList<>();
-
-        sumMap.entrySet().forEach(x -> {
-            if(x.getValue()[0]>=2){
-                outPutList1.add(x.getKey() +"的同行次数："+x.getValue()[0]);
-                System.out.println(x.getKey() +"的同行次数："+x.getValue()[0]);
-            }
-            if(x.getValue()[1]>=2){
-                outPutList2.add(x.getKey() +"邻座次数："+x.getValue()[1]);
-                System.out.println(x.getKey() +"邻座次数："+x.getValue()[1]);
-            }
-        });
-
-
-        //结果排序
-        Collections.sort(outPutList1,FindUtils.getComparetor());
-        Collections.sort(outPutList2, FindUtils.getComparetor());
-        //写文件
-        FileReadWriteUtil.write2File(outPutList1, "/home/lee/app/idea-IU-182.4892.20/workSop/RailwayFind/textFIle/铁路同行结果");
-        FileReadWriteUtil.write2File(outPutList2, "/home/lee/app/idea-IU-182.4892.20/workSop/RailwayFind/textFIle/铁路邻座位结果");
+//        LinkedList<String> outPutList1 = new LinkedList<>();
+//        LinkedList<String> outPutList2 = new LinkedList<>();
+//
+//        sumMap.entrySet().forEach(x -> {
+//            if(x.getValue()[0]>=2){
+//                outPutList1.add(x.getKey() +"的同行次数："+x.getValue()[0]);
+//                System.out.println(x.getKey() +"的同行次数："+x.getValue()[0]);
+//            }
+//            if(x.getValue()[1]>=2){
+//                outPutList2.add(x.getKey() +"邻座次数："+x.getValue()[1]);
+//                System.out.println(x.getKey() +"邻座次数："+x.getValue()[1]);
+//            }
+//        });
+//
+//
+//        //结果排序
+//        Collections.sort(outPutList1,FindUtils.getComparetor());
+//        Collections.sort(outPutList2, FindUtils.getComparetor());
+//        //写文件
+//        FileReadWriteUtil.write2File(outPutList1, "/home/lee/app/idea-IU-182.4892.20/workSop/RailwayFind/textFIle/铁路同行结果");
+//        FileReadWriteUtil.write2File(outPutList2, "/home/lee/app/idea-IU-182.4892.20/workSop/RailwayFind/textFIle/铁路邻座位结果");
 
         //结果转化为rdd
 

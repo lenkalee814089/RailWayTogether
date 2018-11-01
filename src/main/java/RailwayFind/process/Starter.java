@@ -90,9 +90,11 @@ public  class Starter {
         Dataset<Row> hbaseDf = sparkSession.createDataFrame(rowJavaRDD, schema);
     //----布置的测试环境
 
-
+    String railColumn="GMSFHM;CXH;ZWH";
+    String commonColuns ="SFD;MDD;CC;FCSJ";
     //---------insight组件-------------------------------------------------------------------------------------------------------------------------------------
-        Dataset<Row> resultDf = Processer.process(hbaseDf, sparkSession, 4,  1);
+        Dataset<Row> resultDf = Processer.railWayCompute(hbaseDf, 4,  1,"GMSFHM","SFD","MDD","CC",
+                "CXH","ZWH","FCSJ",railColumn,commonColuns);
     //----------------------------------------------------------------------------------------------------------------------------------------------
 
         return resultDf;

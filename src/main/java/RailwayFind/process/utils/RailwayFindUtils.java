@@ -1,13 +1,15 @@
 package RailwayFind.process.utils;
 
 
-import RailwayFind.process.model.Record;
+import RailwayFind.process.model.RailwayRecord;
+import com.alibaba.fastjson.JSONObject;
 import org.apache.log4j.Logger;
+import scala.Tuple4;
 
 import java.util.*;
 
-public class FindUtils {
-    private static final Logger LOGGER = Logger.getLogger(FindUtils.class);
+public class RailwayFindUtils {
+    private static final Logger LOGGER = Logger.getLogger(RailwayFindUtils.class);
 
     /**
      * 判断两座位号是否邻座
@@ -38,7 +40,7 @@ public class FindUtils {
      * @param recordB
      * @return
      */
-    public static boolean isCloseSeat(Record recordA, Record recordB){
+    public static boolean isCloseSeat(RailwayRecord recordA, RailwayRecord recordB){
         if (recordA.getCXH().equals(recordB.getCXH())&&isCloseSeatNUm(recordA.getZWH(), recordB.getZWH()) ){
             return true;
         }
@@ -51,24 +53,24 @@ public class FindUtils {
      * @param recordB
      * @return
      */
-    public static boolean isSameRailway(Record recordA, Record recordB){
+    public static boolean isSameRailway(RailwayRecord recordA, RailwayRecord recordB){
         return recordA.getCC().equals(recordB.getCC()) && recordA.getFCSJ().equals(recordB.getFCSJ())&&
                 recordA.getMDD().equals(recordB.getMDD())&&recordA.getSFD().equals(recordB.getSFD());
     }
     /**
-     * 获取任意两公民在某车次的同行和邻座
+     * 返回一个数组,里面是两个list,第一个放两个人判定为"同行"的消息json,第二个放判定为"邻座"的信息json
      * @param records
      * @return
      */
-    public static Map<String,int[]> getResultMap(List<Record> records){
-        Map<String,int[]> map = new HashMap<>();
+    public static Map<String,List<JSONObject> []> getResultMap(List<RailwayRecord> records){
+        Map<String, List<JSONObject> []> map = new HashMap<>();
 
-        int[] arr ;
+        List<JSONObject> [] arr ;
         String key;
-        Record recordA ;
-        Record recordB ;
-        Iterator<Record> it2;
-        Iterator<Record> it = records.iterator();
+        RailwayRecord recordA ;
+        RailwayRecord recordB ;
+        Iterator<RailwayRecord> it2;
+        Iterator<RailwayRecord> it = records.iterator();
 
         while (it.hasNext()) {
             recordA=it.next();
@@ -85,11 +87,16 @@ public class FindUtils {
 
                         key = StringUtil.combine2GMSFZ(recordA.getGMSFHM()  ,recordB.getGMSFHM() );
                         //获得同行数和邻座数
-                        arr = map.getOrDefault(key, new int[]{0, 0});
-                        arr[0]++;
+                        arr = map.getOrDefault(key,  new List[]{new LinkedList(),new LinkedList(),new LinkedList(),new LinkedList()});
+                        arr[0].add(recordA.getDiffFieldJsonObject());
+                        arr[0].add(recordB.getDiffFieldJsonObject());
+                        arr[2].add(recordA.getSameFieldJsonObject());
                         if (isCloseSeat(recordA, recordB)){
 
-                            arr[1]++;
+                            arr[1].add(recordA.getDiffFieldJsonObject());
+                            arr[1].add(recordB.getDiffFieldJsonObject());
+                            arr[3].add(recordA.getSameFieldJsonObject());
+
                         }
                         map.put(key, arr);
                     }

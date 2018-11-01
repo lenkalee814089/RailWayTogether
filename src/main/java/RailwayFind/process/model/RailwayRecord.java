@@ -1,32 +1,39 @@
 package RailwayFind.process.model;
 
 
+import com.alibaba.fastjson.JSONObject;
+
 import java.io.Serializable;
 
-public class Record implements Serializable {
+public class RailwayRecord implements Serializable {
     private String GMSFHM;
     private String SFD;
-
-    @Override
-    public String toString() {
-        return "Record{" +
-                "GMSFHM='" + GMSFHM + '\'' +
-                ", SFD='" + SFD + '\'' +
-                ", MDD='" + MDD + '\'' +
-                ", CC='" + CC + '\'' +
-                ", CXH='" + CXH + '\'' +
-                ", ZWH='" + ZWH + '\'' +
-                ", FCSJ='" + FCSJ + '\'' +
-                '}';
-    }
-
     private String MDD;
     private String CC;
     private String CXH;
     private String ZWH;
     private String FCSJ;
+    private JSONObject diffFieldJsonObject;
+    private JSONObject sameFieldJsonObject;
 
-    public Record(){
+
+    public JSONObject getDiffFieldJsonObject() {
+        return diffFieldJsonObject;
+    }
+
+    public void setDiffFieldJsonObject(JSONObject diffFieldJsonObject) {
+        this.diffFieldJsonObject = diffFieldJsonObject;
+    }
+
+    public JSONObject getSameFieldJsonObject() {
+        return sameFieldJsonObject;
+    }
+
+    public void setSameFieldJsonObject(JSONObject sameFieldJsonObject) {
+        this.sameFieldJsonObject = sameFieldJsonObject;
+    }
+
+    public RailwayRecord(){
 
     }
 
@@ -38,7 +45,7 @@ public class Record implements Serializable {
         this.FCSJ = FCSJ;
     }
 
-    public Record( String GMSFHM, String SFD, String MDD, String CC, String CXH, String ZWH, String FCSJ) {
+    public RailwayRecord(String GMSFHM, String SFD, String MDD, String CC, String CXH, String ZWH, String FCSJ, JSONObject diffFieldJsonObject, JSONObject sameFieldJsonObject) {
         this.GMSFHM = GMSFHM;
         this.SFD = SFD;
         this.MDD = MDD;
@@ -46,6 +53,8 @@ public class Record implements Serializable {
         this.CXH = CXH;
         this.ZWH = ZWH;
         this.FCSJ = FCSJ;
+        this.diffFieldJsonObject = diffFieldJsonObject;
+        this.sameFieldJsonObject = sameFieldJsonObject;
     }
 
     public String getGMSFHM() {
